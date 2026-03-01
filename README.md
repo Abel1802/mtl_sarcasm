@@ -51,10 +51,15 @@ To preprocess the data, run the `preprocess.py` script:
 python data/preprocess.py
 ```
 
-### Training
+### Training (Text Only)
 To train the model, run the `main.py` script:
 ```bash
-python main.py
+python -m src.trainer.train \
+  --exp_name Text_Only \
+  --model_type gating \
+  --lambda_reg 0.1 \
+  --ablate_audio \
+  --ablate_video
 ```
 The training script will automatically load the configuration from `configs/default.yaml`. You can modify the configuration by editing this file or by passing a custom configuration file using the `--config` argument.
 
