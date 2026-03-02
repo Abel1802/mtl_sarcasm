@@ -27,10 +27,9 @@ class MTLTrainer:
         self.device = device
         
         # 定义多任务损失函数
-        # 注意：分类通常建议用 BCEWithLogitsLoss，模型最后一层不需要 Sigmoid，数值更稳定
         self.criterion_cls = nn.BCEWithLogitsLoss() 
         self.criterion_reg = nn.MSELoss()
-        self.lambda_reg = config.get('lambda_reg', 0.1) # 控制辅助任务的权重
+        self.lambda_reg = config.get('lambda_reg', 0.1)
         
         # 训练超参数
         self.epochs = config.get('epochs', 50)

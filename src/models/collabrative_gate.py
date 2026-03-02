@@ -146,7 +146,7 @@ class Speaker_Independent_Dual_Mode_without_Context(nn.Module):
 
 
 class Speaker_Independent_Triple_Mode_without_Context(nn.Module):
-    def __init__(self, input_embedding_A=2048, input_embedding_B=1024, input_embedding_C=1024, shared_embedding=1024, projection_embedding=512, dropout=0.3, num_classes=5):
+    def __init__(self, input_embedding_A=768, input_embedding_B=768, input_embedding_C=768, shared_embedding=1024, projection_embedding=512, dropout=0.3, num_classes=1):
         super(Speaker_Independent_Triple_Mode_without_Context, self).__init__()
 
         self.input_embedding_A = input_embedding_A
@@ -197,6 +197,21 @@ class Speaker_Independent_Triple_Mode_without_Context(nn.Module):
             nn.Linear(128,  self.num_classes)
         )
 
+        # Regression Head: 用于预测 Certainty / Intensity
+        self.reg_head = nn.Sequential(
+            nn.Linear(3 * self.shared_embedding, self.shared_embedding),
+            nn.BatchNorm1d(self.shared_embedding),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            
+            nn.Linear(self.shared_embedding, 256),
+            nn.BatchNorm1d(256),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            
+            nn.Linear(256, 1) # 回归任务输出 1 维连续值
+        )
+
     def attention(self, featureA, featureB):
         """ This method takes two features and calcuates the attention """
         input = torch.cat((featureA, featureB), dim=1)
@@ -208,8 +223,11 @@ class Speaker_Independent_Triple_Mode_without_Context(nn.Module):
         # here we call for pairwise attention
         return nn.functional.softmax(self.collabrative_gate_2(input), dim=1)
 
-    def forward(self, uA, uB,  uC):
+    def forward(self, features):
         """making Feature Projection in order to make all feature of same dimension"""
+        uA = features['text']   # [B, 768]
+        uB = features['audio']  # [B, 768]
+        uC = features['video']  # [B, 768]
 
         shared_A_utterance = self.norm_A_utterance(
             nn.functional.relu(self.A_utterance_share(uA)))
@@ -230,4 +248,4 @@ class Speaker_Independent_Triple_Mode_without_Context(nn.Module):
         temp = torch.cat((updated_shared_A, updated_shared_C), dim=1)
         input = torch.cat((temp, updated_shared_B), dim=1)
 
-        return self.pred_module(input)
+        return self.pred_module(input), self.reg_head(input)

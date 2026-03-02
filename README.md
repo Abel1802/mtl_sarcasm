@@ -61,6 +61,16 @@ python -m src.trainer.train \
   --ablate_audio \
   --ablate_video
 ```
+
+### Training (Text + Audio + Video)
+To train the model, run the `main.py` script:
+```bash
+python -m src.trainer.train \
+--exp_name Text_Audio_Video \
+--model_type collabrative \
+--lambda_reg 0.1
+```
+
 The training script will automatically load the configuration from `configs/default.yaml`. You can modify the configuration by editing this file or by passing a custom configuration file using the `--config` argument.
 
 

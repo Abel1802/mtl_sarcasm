@@ -2,6 +2,8 @@ import os
 import argparse
 import json
 import logging
+import random        # 🌟 新增
+import numpy as np   # 🌟 新增
 import torch
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
@@ -10,7 +12,18 @@ from torch.optim import AdamW
 from src.data_loader.data_set import MultimodalSarcasmDataset
 from src.data_loader.data_set import create_stratified_datasets
 from src.models.mtl_model import GatingMTLModel, CrossAttentionMTLModel
+from src.models.collabrative_gate import Speaker_Independent_Triple_Mode_without_Context
 from src.trainer.trainer import MTLTrainer
+
+def set_seed(seed: int = 42):
+    """固定所有的随机种子，确保实验可绝对复现"""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Multimodal Sarcasm Detection MTL Training")
@@ -21,13 +34,16 @@ def parse_args():
     parser.add_argument("--save_dir", type=str, default="output/", 
                         help="Base directory for saving experiments")
     
+    # 🌟 新增：随机种子参数
+    parser.add_argument("--seed", type=int, default=42, help="Global random seed for reproducibility")
+    
     # 2. 模态消融参数 (Ablation Study)
     parser.add_argument("--ablate_text", action="store_true", help="Ablate (zero out) text modality")
     parser.add_argument("--ablate_audio", action="store_true", help="Ablate (zero out) audio modality")
     parser.add_argument("--ablate_video", action="store_true", help="Ablate (zero out) video modality")
 
     # 模型与架构
-    parser.add_argument("--model_type", type=str, default="gating", choices=["gating", "cross_attn"],
+    parser.add_argument("--model_type", type=str, default="gating", choices=["gating", "cross_attn", "collabrative"],
                         help="Choose the fusion model architecture")
     parser.add_argument("--embed_dim", type=int, default=768, help="Feature dimension from extractors")
     
@@ -53,28 +69,30 @@ def parse_args():
 def main():
     args = parse_args()
     
+    # 🌟 新增：在程序一启动，立刻锁定全局随机种子
+    set_seed(args.seed)
+    
     # ==========================================
     # 📂 实验目录创建与配置保存
     # ==========================================
     exp_dir = os.path.join(args.save_dir, args.exp_name)
     os.makedirs(exp_dir, exist_ok=True)
 
-    # 🌟 新增：配置日志系统 (双路输出：控制台 + log文件)
+    # 配置日志系统 (双路输出：控制台 + log文件)
     log_file = os.path.join(exp_dir, "train.log")
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(levelname)s - %(message)s",
         handlers=[
-            logging.FileHandler(log_file),      # 保存到文件
-            logging.StreamHandler()             # 打印到控制台
+            logging.FileHandler(log_file),
+            logging.StreamHandler()
         ]
     )
     
     # 将 args 转化为字典
     config = vars(args)
-    # 将 trainer 需要的 save_dir 覆盖为当前实验的独立文件夹
     config['save_dir'] = exp_dir 
-    config['run_name'] = args.exp_name  # 将 wandb 的 Run Name 设为 exp_name
+    config['run_name'] = args.exp_name
     config['use_wandb'] = not args.disable_wandb
     config['warmup_ratio'] = 0.1
     config['patience'] = 7  # Early stopping patience
@@ -88,10 +106,10 @@ def main():
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    # 🌟 修改：将所有的 print 替换为 logging.info
+    logging.info(f"🌱 Set global random seed to {args.seed}") # 🌟 打印种子信息
     logging.info(f"🚀 Starting training on {device} | Model: {args.model_type} | Exp: {args.exp_name}")
     logging.info(f"📁 Output directory: {exp_dir}")
-    logging.info(f"⚙️ Config: {config}")  # 把配置也打印进日志，一目了然
+    logging.info(f"⚙️ Config: {config}")  
     
     # 加载数据 (Load Data)
     logging.info("📦 Loading datasets...")
@@ -127,6 +145,8 @@ def main():
         model = GatingMTLModel(embed_dim=args.embed_dim)
     elif args.model_type == "cross_attn":
         model = CrossAttentionMTLModel(embed_dim=args.embed_dim)
+    elif args.model_type == "collabrative":
+        model = Speaker_Independent_Triple_Mode_without_Context()
     else:
         raise ValueError("Invalid model type")
 

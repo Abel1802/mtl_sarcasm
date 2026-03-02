@@ -9,7 +9,6 @@ from torch.utils.data import Subset
 
 def create_stratified_datasets(all_dataset, test_size=0.2, random_seed=42):
     # 1. 提取所有样本的标签 (Sarcasm Label)
-    # 这一步是为了让 sklearn 知道每个索引对应的类别是什么
     logging.info("🔍 Extracting labels for stratified split...")
     targets = [all_dataset[i]['label'].item() for i in range(len(all_dataset))]
     
@@ -17,7 +16,6 @@ def create_stratified_datasets(all_dataset, test_size=0.2, random_seed=42):
     indices = list(range(len(all_dataset)))
     
     # 3. 使用 sklearn 进行严格的分层划分
-    # stratify=targets 是核心，它强制保证 train 和 val 里的类别比例与整体完全一致
     train_indices, val_indices = train_test_split(
         indices, 
         test_size=test_size, 
@@ -164,9 +162,9 @@ if __name__ == "__main__":
     dataloader = DataLoader(
         dataset, 
         batch_size=32, 
-        shuffle=True, 
-        num_workers=4,  # 多进程加速数据加载
-        pin_memory=True # 加速转入 GPU 的过程
+        shuffle=True,
+        num_workers=4,
+        pin_memory=True
     )
     
     # 取一个 batch 看看形状
