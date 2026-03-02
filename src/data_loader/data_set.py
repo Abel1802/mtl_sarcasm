@@ -54,6 +54,12 @@ class MultimodalSarcasmDataset(Dataset):
         self.audio_feat_dir = audio_feat_dir
         self.video_feat_dir = video_feat_dir
         self.feat_ext = feat_ext
+
+        # 0. check directory exists
+        assert os.path.exists(csv_path), f"CSV file {csv_path} does not exist!"
+        assert os.path.exists(text_feat_dir), f"Text feature directory {text_feat_dir} does not exist!"
+        assert os.path.exists(audio_feat_dir), f"Audio feature directory {audio_feat_dir} does not exist!"
+        assert os.path.exists(video_feat_dir), f"Video feature directory {video_feat_dir} does not exist!"
         
         # 1. 读取原始标注表
         raw_df = pd.read_csv(csv_path)

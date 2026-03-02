@@ -56,9 +56,9 @@ def parse_args():
     # 数据集路径配置
     parser.add_argument("--train_csv", type=str, default="raw_data.csv")
     parser.add_argument("--val_csv", type=str, default="data/processed/val.csv")
-    parser.add_argument("--text_dir", type=str, default="/projects/0/prjs0864/phd_projects/mlt_sarcasm/processed_data/text_features")
-    parser.add_argument("--audio_dir", type=str, default="/projects/0/prjs0864/phd_projects/mlt_sarcasm/processed_data/audio_features")
-    parser.add_argument("--video_dir", type=str, default="/projects/0/prjs0864/phd_projects/mlt_sarcasm/processed_data/video_features")
+    parser.add_argument("--text_dir", type=str, default="processed_data/text_features")
+    parser.add_argument("--audio_dir", type=str, default="processed_data/audio_features")
+    parser.add_argument("--video_dir", type=str, default="processed_data/video_features")
     
     # Wandb 日志控制
     parser.add_argument("--disable_wandb", action="store_true", help="Disable Weights & Biases logging")
