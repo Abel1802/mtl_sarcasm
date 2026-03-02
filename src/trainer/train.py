@@ -2,13 +2,12 @@ import os
 import argparse
 import json
 import logging
-import random        # 🌟 新增
-import numpy as np   # 🌟 新增
+import random
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
 
-# 这里的路径请根据你实际的目录结构调整
 from src.data_loader.data_set import MultimodalSarcasmDataset
 from src.data_loader.data_set import create_stratified_datasets
 from src.models.mtl_model import GatingMTLModel, CrossAttentionMTLModel
@@ -55,7 +54,7 @@ def parse_args():
     parser.add_argument("--weight_decay", type=float, default=1e-4, help="Weight decay for AdamW")
     
     # 数据集路径配置
-    parser.add_argument("--train_csv", type=str, default="/projects/0/prjs0864/phd_projects/raw_data/sarcasm_zh26/labels_transcriptions_Sheet1_filtered.csv")
+    parser.add_argument("--train_csv", type=str, default="raw_data.csv")
     parser.add_argument("--val_csv", type=str, default="data/processed/val.csv")
     parser.add_argument("--text_dir", type=str, default="/projects/0/prjs0864/phd_projects/mlt_sarcasm/processed_data/text_features")
     parser.add_argument("--audio_dir", type=str, default="/projects/0/prjs0864/phd_projects/mlt_sarcasm/processed_data/audio_features")
@@ -93,7 +92,8 @@ def main():
     config = vars(args)
     config['save_dir'] = exp_dir 
     config['run_name'] = args.exp_name
-    config['use_wandb'] = not args.disable_wandb
+    config['use_wandb'] = args.disable_wandb
+    # config['use_wandb'] = not args.disable_wandb
     config['warmup_ratio'] = 0.1
     config['patience'] = 7  # Early stopping patience
     
