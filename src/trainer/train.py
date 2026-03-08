@@ -51,6 +51,7 @@ def parse_args():
     parser.add_argument("--lr", type=float, default=2e-5, help="Learning rate")
     parser.add_argument("--epochs", type=int, default=50, help="Number of training epochs")
     parser.add_argument("--lambda_reg", type=float, default=0.1, help="Weight for the certainty regression loss")
+    parser.add_argument("--lambda_rat", type=float, default=0.1, help="Weight for the certainty modality loss")
     parser.add_argument("--weight_decay", type=float, default=1e-4, help="Weight decay for AdamW")
     
     # 数据集路径配置

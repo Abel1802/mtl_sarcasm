@@ -39,7 +39,7 @@ def create_stratified_datasets(all_dataset, test_size=0.2, random_seed=42):
 class MultimodalSarcasmDataset(Dataset):
     """
     多模态反讽检测数据集
-    负责对齐并加载 Text, Audio, Video 特征以及 Sarcasm 和 Certainty 标签
+    负责对齐并加载 Text, Audio, Video 特征以及 Sarcasm, Certainty(强度) 和 Rationale(模态依据) 标签
     """
     def __init__(
         self, 
@@ -69,7 +69,7 @@ class MultimodalSarcasmDataset(Dataset):
         missing_count = 0
         
         for _, row in raw_df.iterrows():
-            uid = str(row['id'])  # 确保 id 是字符串格式
+            uid = str(row['id'])  
             
             # 构建特征文件路径
             text_path = os.path.join(self.text_feat_dir, f"{uid}{self.feat_ext}")
@@ -82,25 +82,44 @@ class MultimodalSarcasmDataset(Dataset):
                 # 首先确保 sarcasm_label 是有值的
                 if pd.notna(row['sarcasm_label']):
                     s_label = float(row['sarcasm_label'])
+                    is_valid = False
                     
-                    # 动态处理 certainty 标签
+                    # 动态处理 certainty_1 (强度标签)
                     if pd.notna(row['certainty_1']):
                         c_label = float(row['certainty_1'])
                         is_valid = True
                     elif s_label == 0.0:
-                        # 核心修复：如果是非反讽且 certainty 为空，强制设为 1.0
                         c_label = 1.0
                         is_valid = True
                     else:
-                        # 如果是反讽 (s_label==1)，但 certainty 竟然为空，这种残缺脏数据还是得扔掉
                         is_valid = False
+                        
+                    # ⭐️ 新增：处理 certainty_2 (模态权重/Rationale标签)
+                    # 初始化为全 0 [Text, Audio, Video]
+                    rationale = [0.0, 0.0, 0.0] 
+                    
+                    if is_valid: # 只有前面的逻辑通过了，才继续判断 certainty_2
+                        if s_label == 0.0:
+                            # 标签为0时，不管它有没有值，都强制设为 [0,0,0]
+                            pass 
+                        elif s_label == 1.0:
+                            # 标签为1时，解析字符串
+                            if pd.notna(row['certainty_2']):
+                                cert2_str = str(row['certainty_2']).lower()
+                                if 't' in cert2_str: rationale[0] = 1.0
+                                if 'a' in cert2_str: rationale[1] = 1.0
+                                if 'v' in cert2_str: rationale[2] = 1.0
+                            else:
+                                # 如果是反讽，但缺失 modality 依据，也视为脏数据扔掉
+                                is_valid = False
                         
                     # 如果数据合法，加入 valid_data
                     if is_valid:
                         valid_data.append({
                             'id': uid,
                             'label': s_label,
-                            'certainty': c_label
+                            'certainty': c_label,
+                            'rationale': rationale  # ⭐️ 将新特征存入字典
                         })
                     else:
                         missing_count += 1
@@ -121,24 +140,21 @@ class MultimodalSarcasmDataset(Dataset):
         row = self.data.iloc[idx]
         uid = row['id']
         
-        # 1. 动态读取特征 (On-the-fly loading 节省内存)
+        # 1. 动态读取特征
         text_path = os.path.join(self.text_feat_dir, f"{uid}{self.feat_ext}")
         audio_path = os.path.join(self.audio_feat_dir, f"{uid}{self.feat_ext}")
         video_path = os.path.join(self.video_feat_dir, f"{uid}{self.feat_ext}")
         
-        # 使用 weights_only=True 防止反序列化安全警告
-        text_feat = torch.load(text_path, weights_only=True)
-        audio_feat = torch.load(audio_path, weights_only=True)
-        video_feat = torch.load(video_path, weights_only=True)
+        text_feat = torch.load(text_path, weights_only=True).squeeze()
+        audio_feat = torch.load(audio_path, weights_only=True).squeeze()
+        video_feat = torch.load(video_path, weights_only=True).squeeze()
         
-        # 去除多余的 batch 维度 (例如将 [1, 768] 变为 [768])
-        text_feat = text_feat.squeeze()
-        audio_feat = audio_feat.squeeze()
-        video_feat = video_feat.squeeze()
-        
-        # 2. 获取双任务标签
+        # 2. 获取标签
         label = torch.tensor(row['label'], dtype=torch.float32)
         certainty = torch.tensor(row['certainty'], dtype=torch.float32)
+        
+        # ⭐️ 新增：将 list 转换为 torch.Tensor
+        rationale = torch.tensor(row['rationale'], dtype=torch.float32)
         
         # 3. 组装返回字典
         return {
@@ -147,7 +163,8 @@ class MultimodalSarcasmDataset(Dataset):
             'audio': audio_feat,
             'video': video_feat,
             'label': label,
-            'certainty': certainty
+            'certainty': certainty,
+            'rationale': rationale
         }
 
 # ==========================================

@@ -212,6 +212,15 @@ class Speaker_Independent_Triple_Mode_without_Context(nn.Module):
             nn.Linear(256, 1) # 回归任务输出 1 维连续值
         )
 
+        # 在 __init__ 中添加辅助预测头
+        self.rationale_head = nn.Sequential(
+            nn.Linear(3 * self.shared_embedding, 256),
+            nn.BatchNorm1d(256),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(256, 3) # 输出 3 维，对应 Text, Audio, Video 的 rationale
+        )
+
     def attention(self, featureA, featureB):
         """ This method takes two features and calcuates the attention """
         input = torch.cat((featureA, featureB), dim=1)
@@ -248,4 +257,5 @@ class Speaker_Independent_Triple_Mode_without_Context(nn.Module):
         temp = torch.cat((updated_shared_A, updated_shared_C), dim=1)
         input = torch.cat((temp, updated_shared_B), dim=1)
 
-        return self.pred_module(input), self.reg_head(input)
+        pred_rationale = self.rationale_head(input)
+        return self.pred_module(input), self.reg_head(input), pred_rationale

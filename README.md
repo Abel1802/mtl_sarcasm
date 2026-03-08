@@ -45,14 +45,6 @@ pip install -r requirements.txt
 
 ## 🚀 Usage
 
-### Preprocessing
-To preprocess the data, run the `preprocess.py` script:
-```bash
-python data/preprocess.py
-```
-
-
-
 ### Training (Text + Audio + Video)
 To train the model, run the `main.py` script:
 ```bash
@@ -76,11 +68,6 @@ python -m src.trainer.train \
 The training script will automatically load the configuration from `configs/default.yaml`. You can modify the configuration by editing this file or by passing a custom configuration file using the `--config` argument.
 
 
-### Evaluation
-To evaluate the model, run the `evaluate.py` script:
-```bash
-python training/evaluate.py
-```
 
 ## Results
-The results of the model can be found in the `results` directory.
+The results of the model can be found in the `output` directory.
